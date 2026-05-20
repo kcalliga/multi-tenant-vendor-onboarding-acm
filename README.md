@@ -1,16 +1,18 @@
 # Multi-Tenant Vendor Onboarding via ACM Policies
-This repository contains the architecture and blueprints to demonstrate automated, secure, third-party vendor onboarding using Red Hat Advanced Cluster Management (ACM).
+
+This repository contains the architecture and blueprints to demonstrate automated, secure, third-party vendor onboarding using Red Hat Advanced Cluster Management (ACM) integrated with an enterprise Single Sign-On (SSO) identity plane.
 
 ## Key Features Demonstrated:
+* **Identity Provider (IdP) as Source of Truth:** Onboarding begins at the central authentication layer (e.g., Keycloak, Okta, Azure AD), enforcing enterprise governance across all platform tools.
+* **Admin GUI-Driven Access Prep:** Platforms engineers prepare cluster permissions by executing a global find-and-replace on a single template string entirely within the ACM browser window.
+* **Just-In-Time (JIT) Registry Provisioning:** Eliminates manual image registry setup; the vendor's dedicated Quay organization and user profile are automatically generated upon their first SSO login handshake.
+* **Strict Tenant Console Isolation:** Customizes navigation shortcuts for external users, routing them strictly to their multi-cluster perspectives while removing default OpenShift infrastructure viewpoints.
 
-* Admin GUI-Driven Onboarding: Admins can onboard tenants by executing a global find-and-replace on a single template string entirely within the ACM browser window.
-* Console Customization: Injects an isolated sidebar navigation shortcut that maps directly to the vendor's dedicated toolsets.
-* Strict Tenant Isolation: Restricts vendor visibility entirely to assigned ACM multi-cluster perspectives while removing default OpenShift administrative and developer viewpoints.
-* Self-Service Catalog Integration: Pre-loads pre-approved application blueprints directly inside the ACM Application creation dropdown wizard.
+---
 
 ## Repository Architecture
 
-The repository is structured to remain flat, lightweight, and optimized for a zero-copy-paste live demonstration:
+The repository remains flat, lightweight, and optimized for a clean, zero-copy-paste live demonstration flow:
 
 ```text
 multi-tenant-vendor-onboarding-acm/
@@ -19,34 +21,3 @@ multi-tenant-vendor-onboarding-acm/
 └── example-vendor-applications/         # Isolated application subfolder for vendor self-service
     ├── app-subscription-channel.yaml    # Pre-configured ACM Git Channel blueprint
     └── sample-workload-manifest.yaml    # Example workload template selectable via dropdown wizard
-```
-
-## Operational Workflows
-
-### Onboarding a New Vendor (Admin GUI Steps)
-To onboard a new partner vendor using our universal blueprint:
-
-1. Navigate to **Governance** ➔ **Policies** inside the ACM console and select the dormant `template-onboard-vendor` blueprint.
-2. Click **Edit YAML** to open the embedded browser code editor.
-3. Press **`Ctrl + F`** (or `Cmd + F` on Mac) to bring up the inline search-and-replace panel.
-4. Input the following configuration tokens:
-   * **Search For:** `generic-vendor`
-   * **Replace With:** `vendor-a` *(or your target partner name, e.g., `alpha`, `beta`)*
-5. Click the **Global Replace All** icon (the stacked `ab` over `ab` icon on the far right of the replace input text box).
-6. Click the blue **Save** button.
-
-ACM automatically handles this as a unique, standalone policy instantiation. The governance engine will instantly spin up a dedicated namespace, attach targeted tenant RBAC parameters, and generate the custom OpenShift console shortcuts.
-
----
-
-### Swapping Vendors for Live Demonstrations
-To showcase the rapid lifecycle management capabilities of the platform during a live presentation:
-
-1. Return to the **Governance** dashboard and open the freshly created `policy-onboard-vendor-a`.
-2. Click **Edit YAML** and press **`Ctrl + F`** to open the replace tool.
-3. Run a global swap replacing your active vendor string with your second demonstration profile:
-   * **Search For:** `vendor-a`
-   * **Replace With:** `vendor-b`
-4. Click **Replace All** and select **Save**.
-
-The underlying platform engine will immediately run an automated garbage-collection routine to dismantle the old routing pathways, re-evaluate the object properties, and establish the newly declared vendor environment within seconds.
