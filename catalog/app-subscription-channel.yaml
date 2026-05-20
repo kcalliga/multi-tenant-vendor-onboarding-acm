@@ -1,9 +1,0 @@
-apiVersion: apps.open-cluster-management.io/v1
-kind: Channel
-metadata:
-  name: vendor-approved-apps-channel
-  namespace: open-cluster-management-policies
-spec:
-  type: Git
-  pathname: 'https://github.com/your-organization/multi-tenant-vendor-onboarding.git'
-  path: example_vendor_applications # <-- Instructs ACM to look inside this specific subfolder for apps
