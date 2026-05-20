@@ -1,19 +1,19 @@
 apiVersion: policy.open-cluster-management.io/v1
 kind: Policy
 metadata:
-  name: policy-onboard-vendor-alpha # <-- Unique name for this specific instance
+  name: policy-onboard-generic-vendor # <-- SEARCH & REPLACE HERE
   namespace: open-cluster-management-policies
   annotations:
-    policy.open-cluster-management.io/description: "Onboard Vendor Alpha Environment"
+    policy.open-cluster-management.io/description: "Onboard Workspace for generic-vendor" # <-- SEARCH & REPLACE HERE
 spec:
-  disabled: false # <-- Turn it on so it deploys instantly
+  disabled: false # Ready to fire immediately when you save it as a new policy
   remediationAction: enforce
   policy-templates:
     - objectDefinition:
         apiVersion: policy.open-cluster-management.io/v1
         kind: ConfigurationPolicy
         metadata:
-          name: config-vendor-alpha-env
+          name: config-generic-vendor-env # <-- SEARCH & REPLACE HERE
         spec:
           remediationAction: enforce
           severity: high
@@ -25,7 +25,7 @@ spec:
                 apiVersion: v1
                 kind: Namespace
                 metadata:
-                  name: vendor-alpha-apps # <-- Plain text name
+                  name: generic-vendor-apps # <-- SEARCH & REPLACE HERE
 
             # 2. ENFORCE RESTRICTED RBAC
             - complianceType: musthave
@@ -33,11 +33,11 @@ spec:
                 apiVersion: rbac.authorization.k8s.io/v1
                 kind: RoleBinding
                 metadata:
-                  name: vendor-admin-binding
-                  namespace: vendor-alpha-apps # <-- Plain text target
+                  name: generic-vendor-admin-binding # <-- SEARCH & REPLACE HERE
+                  namespace: generic-vendor-apps # <-- SEARCH & REPLACE HERE
                 subjects:
                 - kind: User
-                  name: vendor-alpha-user # <-- Plain text username
+                  name: generic-vendor-user # <-- SEARCH & REPLACE HERE
                   apiGroup: rbac.authorization.k8s.io
                 roleRef:
                   kind: ClusterRole
@@ -50,11 +50,11 @@ spec:
                 apiVersion: console.openshift.io/v1
                 kind: ConsoleLink
                 metadata:
-                  name: alpha-registry-link # <-- Plain text name
+                  name: generic-vendor-registry-link # <-- SEARCH & REPLACE HERE
                 spec:
-                  href: "https://quay-server.apps.platform-customer.com/vendor-alpha" # <-- Direct URL
+                  href: "https://quay-server.apps.platform-customer.com/generic-vendor" # <-- SEARCH & REPLACE HERE
                   location: NavigationMenu
-                  text: "Vendor Alpha Registry"
+                  text: "generic-vendor Registry" # <-- SEARCH & REPLACE HERE
                   navigationMenu:
                     section: Vendor Tools
 
@@ -86,21 +86,21 @@ spec:
 apiVersion: policy.open-cluster-management.io/v1
 kind: PlacementBinding
 metadata:
-  name: binding-onboard-vendor-alpha
+  name: binding-onboard-generic-vendor # <-- SEARCH & REPLACE HERE
   namespace: open-cluster-management-policies
 placementRef:
-  name: placement-onboard-vendor-alpha
+  name: placement-onboard-generic-vendor # <-- SEARCH & REPLACE HERE
   apiGroup: cluster.open-cluster-management.io
   kind: Placement
 subjects:
-- name: policy-onboard-vendor-alpha
+- name: policy-onboard-generic-vendor # <-- SEARCH & REPLACE HERE
   apiGroup: policy.open-cluster-management.io
   kind: Policy
 ---
 apiVersion: cluster.open-cluster-management.io/v1beta1
 kind: Placement
 metadata:
-  name: placement-onboard-vendor-alpha
+  name: placement-onboard-generic-vendor # <-- SEARCH & REPLACE HERE
   namespace: open-cluster-management-policies
 spec:
   predicates:
