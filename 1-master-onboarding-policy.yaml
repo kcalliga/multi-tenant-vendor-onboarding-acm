@@ -1,10 +1,12 @@
 apiVersion: policy.open-cluster-management.io/v1
 kind: Policy
 metadata:
-  name: policy-dynamic-vendor-onboarding
+  name: template-onboard-vendor
   namespace: open-cluster-management-policies
+  annotations:
+    policy.open-cluster-management.io/description: "Onboard Vendor Blueprint Template"
 spec:
-  disabled: false
+  disabled: true
   remediationAction: enforce
   policy-templates:
     - objectDefinition:
@@ -84,23 +86,25 @@ spec:
 apiVersion: policy.open-cluster-management.io/v1
 kind: PlacementBinding
 metadata:
-  name: binding-dynamic-vendor-onboarding
+  name: binding-template-onboard-vendor
   namespace: open-cluster-management-policies
 placementRef:
-  name: placement-dynamic-vendor-onboarding
-  apiGroup: apps.open-cluster-management.io
-  kind: PlacementRule
+  name: placement-template-onboard-vendor
+  apiGroup: cluster.open-cluster-management.io
+  kind: Placement
 subjects:
-- name: policy-dynamic-vendor-onboarding
+- name: template-onboard-vendor
   apiGroup: policy.open-cluster-management.io
   kind: Policy
 ---
-apiVersion: apps.open-cluster-management.io/v1
-kind: PlacementRule
+apiVersion: cluster.open-cluster-management.io/v1beta1
+kind: Placement
 metadata:
-  name: placement-dynamic-vendor-onboarding
+  name: placement-template-onboard-vendor
   namespace: open-cluster-management-policies
 spec:
-  clusterSelector:
-    matchExpressions:
-      - {key: local-cluster, operator: In, values: ["true"]}
+  predicates:
+    - requiredClusterSelector:
+        labelSelector:
+          matchExpressions:
+            - {key: local-cluster, operator: In, values: ["true"]}
