@@ -1,111 +1,262 @@
+# =============================================================================
+# Vendor Onboarding Policy Template
+#
+# Usage: Run onboard-vendor.sh --vendor <vendor-name> to render and apply.
+#        All occurrences of "generic-vendor" are replaced with the vendor name.
+#
+# What this policy provisions:
+#   1. Isolated namespace (<vendor>-apps)
+#   2. RoleBinding scoping the vendor SSO user to admin in that namespace only
+#   3. ResourceQuota - prevents unbounded resource consumption
+#   4. LimitRange - sets default container limits
+#   5. NetworkPolicy - default-deny + controlled egress for tenant isolation
+#   6. ConsoleLink - injects vendor Quay registry shortcut into the 9-dot menu
+#
+# NOTE: Console perspective restriction (hiding admin/dev views) is intentionally
+#       NOT in this per-vendor policy. The Console CR is a cluster singleton —
+#       modifying it per-vendor would cause policy conflicts and affect ALL users.
+#       Manage perspective visibility in a separate, one-time platform policy.
+#
+# ClusterSet readiness: The Placement below targets local-cluster today.
+#       When you adopt ClusterSets, add a `clusterSets` field to the Placement
+#       spec and label your clusters. No other changes needed.
+# =============================================================================
+
 apiVersion: policy.open-cluster-management.io/v1
 kind: Policy
 metadata:
-  name: policy-onboard-generic-vendor # <-- SEARCH & REPLACE HERE
+  name: policy-onboard-generic-vendor
   namespace: open-cluster-management-policies
   annotations:
-    policy.open-cluster-management.io/description: "Onboard Workspace for generic-vendor" # <-- SEARCH & REPLACE HERE
+    policy.open-cluster-management.io/description: "Onboard Workspace for generic-vendor"
 spec:
-  disabled: false 
+  disabled: false
   remediationAction: enforce
   policy-templates:
-    - objectDefinition:
-        apiVersion: policy.open-cluster-management.io/v1
-        kind: ConfigurationPolicy
-        metadata:
-          name: config-generic-vendor-env # <-- SEARCH & REPLACE HERE
-        spec:
-          remediationAction: enforce
-          severity: high
-          object-templates:
 
-            # 1. GENERATE THE ISOLATED NAMESPACE
-            - complianceType: musthave
-              objectDefinition:
-                apiVersion: v1
-                kind: Namespace
-                metadata:
-                  name: generic-vendor-apps # <-- SEARCH & REPLACE HERE
+  - objectDefinition:
+      apiVersion: policy.open-cluster-management.io/v1
+      kind: ConfigurationPolicy
+      metadata:
+        name: config-generic-vendor-env
+      spec:
+        remediationAction: enforce
+        severity: high
+        object-templates:
 
-            # 2. ENFORCE RESTRICTED RBAC (Tied to Central IdP String Match)
-            - complianceType: musthave
-              objectDefinition:
-                apiVersion: rbac.authorization.k8s.io/v1
-                kind: RoleBinding
-                metadata:
-                  name: generic-vendor-admin-binding # <-- SEARCH & REPLACE HERE
-                  namespace: generic-vendor-apps # <-- SEARCH & REPLACE HERE
-                subjects:
-                - kind: User
-                  name: generic-vendor-user # <-- SEARCH & REPLACE HERE (Maps 1:1 to SSO token string)
-                  apiGroup: rbac.authorization.k8s.io
-                roleRef:
-                  kind: ClusterRole
-                  name: admin
-                  apiGroup: rbac.authorization.k8s.io
+          # ------------------------------------------------------------------
+          # 1. ISOLATED NAMESPACE
+          # ------------------------------------------------------------------
+          - complianceType: musthave
+            objectDefinition:
+              apiVersion: v1
+              kind: Namespace
+              metadata:
+                name: generic-vendor-apps
+                labels:
+                  tenant: generic-vendor
+                  managed-by: acm-policy
 
-            # 3. INJECT THE REGISTRY SHORTCUT INTO THE ACM HUB APPLICATION LAUNCHER (9-DOT MENU)
-            - complianceType: musthave
-              objectDefinition:
-                apiVersion: console.openshift.io/v1
-                kind: ConsoleLink
-                metadata:
-                  name: generic-vendor-acm-registry-shortcut # <-- SEARCH & REPLACE HERE
-                spec:
-                  href: "https://quay-server.apps.platform-customer.com/generic-vendor" # <-- SEARCH & REPLACE HERE
-                  text: "generic-vendor Registry" # <-- SEARCH & REPLACE HERE
-                  location: ApplicationMenu 
-                  applicationMenu:
-                    section: Vendor Developer Tools
-                    imageURL: https://raw.githubusercontent.com/quay/quay/master/static/img/quay-horizontal-color.svg
+          # ------------------------------------------------------------------
+          # 2. RBAC — scopes the vendor SSO user to admin in their namespace only
+          #    The User CR does not need to exist in advance for SSO/OIDC users;
+          #    OpenShift creates the shadow user on first login automatically.
+          # ------------------------------------------------------------------
+          - complianceType: musthave
+            objectDefinition:
+              apiVersion: rbac.authorization.k8s.io/v1
+              kind: RoleBinding
+              metadata:
+                name: generic-vendor-admin-binding
+                namespace: generic-vendor-apps
+              subjects:
+              - kind: User
+                name: generic-vendor-user
+                apiGroup: rbac.authorization.k8s.io
+              roleRef:
+                kind: ClusterRole
+                name: admin
+                apiGroup: rbac.authorization.k8s.io
 
-            # 4. REMOVE LOCAL OCP CLUSTER PERSPECTIVES FROM THE VENDOR VIEW
-            - complianceType: musthave
-              objectDefinition:
-                apiVersion: operator.openshift.io/v1
-                kind: Console
-                metadata:
-                  name: cluster
-                spec:
-                  customization:
-                    perspectives:
-                      - id: admin
-                        visibility:
-                          state: AccessReview
-                          accessReview:
-                            missing:
-                              resource: clusterrolebindings
-                              verb: list
-                      - id: dev
-                        visibility:
-                          state: AccessReview
-                          accessReview:
-                            missing:
-                              resource: clusterrolebindings
-                              verb: list
----
-apiVersion: policy.open-cluster-management.io/v1
-kind: PlacementBinding
-metadata:
-  name: binding-onboard-generic-vendor # <-- SEARCH & REPLACE HERE
-  namespace: open-cluster-management-policies
-placementRef:
-  name: placement-onboard-generic-vendor # <-- SEARCH & REPLACE HERE
-  apiGroup: cluster.open-cluster-management.io
-  kind: Placement
-subjects:
-- name: policy-onboard-generic-vendor # <-- SEARCH & REPLACE HERE
-  apiGroup: policy.open-cluster-management.io
-  kind: Policy
+          # ------------------------------------------------------------------
+          # 3. RESOURCE QUOTA — prevents unbounded cluster resource consumption
+          #    Adjust values to match your lab / customer SLA expectations.
+          # ------------------------------------------------------------------
+          - complianceType: musthave
+            objectDefinition:
+              apiVersion: v1
+              kind: ResourceQuota
+              metadata:
+                name: generic-vendor-quota
+                namespace: generic-vendor-apps
+              spec:
+                hard:
+                  requests.cpu: "2"
+                  requests.memory: 4Gi
+                  limits.cpu: "4"
+                  limits.memory: 8Gi
+                  pods: "20"
+                  services: "10"
+                  persistentvolumeclaims: "5"
+                  requests.storage: 20Gi
+
+          # ------------------------------------------------------------------
+          # 4. LIMIT RANGE — sets default container-level limits so pods without
+          #    explicit requests/limits still land within the quota above.
+          # ------------------------------------------------------------------
+          - complianceType: musthave
+            objectDefinition:
+              apiVersion: v1
+              kind: LimitRange
+              metadata:
+                name: generic-vendor-limits
+                namespace: generic-vendor-apps
+              spec:
+                limits:
+                - type: Container
+                  default:
+                    cpu: 500m
+                    memory: 512Mi
+                  defaultRequest:
+                    cpu: 100m
+                    memory: 128Mi
+                  max:
+                    cpu: "2"
+                    memory: 2Gi
+                  min:
+                    cpu: 50m
+                    memory: 64Mi
+
+          # ------------------------------------------------------------------
+          # 5. NETWORK POLICY — default deny all ingress/egress, then selectively
+          #    allow only what the vendor needs.
+          # ------------------------------------------------------------------
+
+          # 5a. Default deny all ingress
+          - complianceType: musthave
+            objectDefinition:
+              apiVersion: networking.k8s.io/v1
+              kind: NetworkPolicy
+              metadata:
+                name: default-deny-ingress
+                namespace: generic-vendor-apps
+              spec:
+                podSelector: {}
+                policyTypes:
+                - Ingress
+
+          # 5b. Default deny all egress
+          - complianceType: musthave
+            objectDefinition:
+              apiVersion: networking.k8s.io/v1
+              kind: NetworkPolicy
+              metadata:
+                name: default-deny-egress
+                namespace: generic-vendor-apps
+              spec:
+                podSelector: {}
+                policyTypes:
+                - Egress
+
+          # 5c. Allow intra-namespace traffic
+          - complianceType: musthave
+            objectDefinition:
+              apiVersion: networking.k8s.io/v1
+              kind: NetworkPolicy
+              metadata:
+                name: allow-same-namespace
+                namespace: generic-vendor-apps
+              spec:
+                podSelector: {}
+                policyTypes:
+                - Ingress
+                - Egress
+                ingress:
+                - from:
+                  - podSelector: {}
+                egress:
+                - to:
+                  - podSelector: {}
+
+          # 5d. Allow egress to cluster DNS
+          - complianceType: musthave
+            objectDefinition:
+              apiVersion: networking.k8s.io/v1
+              kind: NetworkPolicy
+              metadata:
+                name: allow-dns-egress
+                namespace: generic-vendor-apps
+              spec:
+                podSelector: {}
+                policyTypes:
+                - Egress
+                egress:
+                - ports:
+                  - port: 5353
+                    protocol: UDP
+                  - port: 5353
+                    protocol: TCP
+
+          # 5e. Allow ingress from the OpenShift router so exposed Routes work
+          - complianceType: musthave
+            objectDefinition:
+              apiVersion: networking.k8s.io/v1
+              kind: NetworkPolicy
+              metadata:
+                name: allow-from-openshift-ingress
+                namespace: generic-vendor-apps
+              spec:
+                podSelector: {}
+                policyTypes:
+                - Ingress
+                ingress:
+                - from:
+                  - namespaceSelector:
+                      matchLabels:
+                        network.openshift.io/policy-group: ingress
+
+          # ------------------------------------------------------------------
+          # 6. CONSOLE LINK — injects a Quay registry shortcut into the
+          #    ACM hub console 9-dot application launcher menu.
+          # ------------------------------------------------------------------
+          - complianceType: musthave
+            objectDefinition:
+              apiVersion: console.openshift.io/v1
+              kind: ConsoleLink
+              metadata:
+                name: generic-vendor-registry-shortcut
+              spec:
+                href: "https://quay-server.apps.platform-customer.com/generic-vendor"
+                text: "generic-vendor Registry"
+                location: ApplicationMenu
+                applicationMenu:
+                  section: Vendor Developer Tools
+                  imageURL: https://raw.githubusercontent.com/quay/quay/master/static/img/quay-horizontal-color.svg
+
 ---
 apiVersion: cluster.open-cluster-management.io/v1beta1
 kind: Placement
 metadata:
-  name: placement-onboard-generic-vendor # <-- SEARCH & REPLACE HERE
+  name: placement-onboard-generic-vendor
   namespace: open-cluster-management-policies
 spec:
   predicates:
-    - requiredClusterSelector:
-        labelSelector:
-          matchExpressions:
-            - {key: local-cluster, operator: In, values: ["true"]}
+  - requiredClusterSelector:
+      labelSelector:
+        matchExpressions:
+        - {key: local-cluster, operator: In, values: ["true"]}
+
+---
+apiVersion: policy.open-cluster-management.io/v1
+kind: PlacementBinding
+metadata:
+  name: binding-onboard-generic-vendor
+  namespace: open-cluster-management-policies
+placementRef:
+  name: placement-onboard-generic-vendor
+  apiGroup: cluster.open-cluster-management.io
+  kind: Placement
+subjects:
+- name: policy-onboard-generic-vendor
+  apiGroup: policy.open-cluster-management.io
+  kind: Policy
