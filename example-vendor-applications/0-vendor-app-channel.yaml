@@ -1,0 +1,29 @@
+# =============================================================================
+# Vendor App Channel
+#
+# This is a PLATFORM-LEVEL object, created once by an admin.
+# It points ACM at the Git repo that contains approved vendor workloads.
+#
+# Convention: Channel objects live in their own namespace, separate from
+# policies and separate from vendor namespaces.
+#
+# Apply with:
+#   oc apply -f 0-vendor-app-channel.yaml
+# =============================================================================
+ 
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: vendor-app-channels
+ 
+---
+apiVersion: apps.open-cluster-management.io/v1
+kind: Channel
+metadata:
+  name: vendor-approved-apps
+  namespace: vendor-app-channels
+  annotations:
+    apps.open-cluster-management.io/reconcile-rate: medium
+spec:
+  type: Git
+  pathname: 'https://github.com/kcalliga/multi-tenant-vendor-onboarding-acm.git'
